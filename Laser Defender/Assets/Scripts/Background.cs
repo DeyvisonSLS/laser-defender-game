@@ -31,6 +31,7 @@ public class Background : MonoBehaviour
     }
     #endregion
 
+    #region MONOBEHAVIOUR
     // Start is called before the first frame update
     void Start()
     {
@@ -44,6 +45,9 @@ public class Background : MonoBehaviour
     {
         MoveObjects(bg1, bg2);
     }
+    #endregion
+
+    #region PRIVATE_METHODS
     private void MoveObjects(GameObject object1, GameObject object2)
     {
         if(object1.transform.position.y <= _screenLimit)
@@ -66,4 +70,5 @@ public class Background : MonoBehaviour
             object2.transform.position -= new Vector3(0.0f, bgSpeed * Time.deltaTime, transform.position.z);
         }
     }
+    #endregion
 }
