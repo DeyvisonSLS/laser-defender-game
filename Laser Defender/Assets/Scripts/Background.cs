@@ -54,6 +54,7 @@ public class Background : MonoBehaviour
         {
             object1.transform.position = _initialPosBg2;
             object2.transform.position = _initialPosBg1;
+            object1.transform.position -= new Vector3(0.0f, bgSpeed * Time.deltaTime, transform.position.z);
         }
         else
         {
@@ -64,6 +65,7 @@ public class Background : MonoBehaviour
         {
             object2.transform.position = _initialPosBg1;
             object1.transform.position = _initialPosBg2;
+            object2.transform.position -= new Vector3(0.0f, bgSpeed * Time.deltaTime, transform.position.z);
         }
         else
         {
