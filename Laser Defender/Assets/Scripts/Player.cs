@@ -4,6 +4,24 @@ using UnityEngine;
 
 public class Player : MonoBehaviour
 {
+    #region FIELDS
+    [SerializeField]
+    private GameObject playerLaser = null;
+    private Vector3 newLaserPos
+    {
+        get
+        {
+            Vector3 newPos = new Vector3
+            (
+                transform.position.x, 
+                transform.position.y + 0.7f, 
+                transform.position.z
+            );
+            return newPos;
+        }
+    }
+    #endregion
+
     #region PROPERTIES
     public float Speed { get; set; } = 5.0f;
     public Vector2 ShipExtent 
@@ -30,12 +48,17 @@ public class Player : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        DoMove();
-        // DoMouseMove();
+        // DoMove();
+        DoMouseMove();
         
         if(Input.GetKeyDown(KeyCode.Escape))
         {
             Cursor.visible = true;
+        }
+
+        if(Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Mouse0))
+        {
+            Instantiate(playerLaser, newLaserPos, Quaternion.identity);
         }
     }
     #endregion
