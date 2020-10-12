@@ -1,12 +1,18 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class Player : MonoBehaviour
 {
     #region FIELDS
     [SerializeField]
-    private GameObject playerLaser = null;
+    private GameObject _laserPrefab = null;
+    [SerializeField]
+    private GameObject _targetPrefab = null;
+    [SerializeField]
+    private float _shipVelocity = 10.0f;
+    [SerializeField]
+    private GameObject _myLine = null;
+    private LineRenderer _myLineRenderer;
+    private Vector3 _shipOffset;
     private Vector3 newLaserPos
     {
         get
@@ -43,6 +49,7 @@ public class Player : MonoBehaviour
     void Start()
     {
         Cursor.visible = false;
+        _myLineRenderer = _myLine.GetComponent<LineRenderer>();
     }
 
     // Update is called once per frame
@@ -58,7 +65,7 @@ public class Player : MonoBehaviour
 
         if(Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Mouse0))
         {
-            Instantiate(playerLaser, newLaserPos, Quaternion.identity);
+            Instantiate(_laserPrefab, newLaserPos, Quaternion.identity);
         }
     }
     #endregion
@@ -74,11 +81,30 @@ public class Player : MonoBehaviour
 
         transform.position = LimitToScreen(new Vector2(newXPos, newYPos));
     }
+
+    // void OnDrawGizmos()
+    // {
+    //     Gizmos.DrawLine(transform.position, _targetPrefab.transform.position);
+    // }
+
     private void DoMouseMove()
     {
-        Vector2 mousePos = LimitToScreen(Camera.main.ScreenToWorldPoint(Input.mousePosition));
+        Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 
-        transform.position = mousePos;
+        _targetPrefab.transform.position = mousePos;
+
+        _shipOffset = transform.position - _targetPrefab.transform.position;
+
+        _myLineRenderer.SetPosition(0, transform.position);
+        _myLineRenderer.SetPosition(1, _targetPrefab.transform.position);
+
+        Ray ray = new Ray(transform.position, _targetPrefab.transform.position);
+
+        Vector3 newPos = transform.position;
+
+        newPos -= _shipOffset * Time.deltaTime * _shipVelocity;
+
+        transform.position = LimitToScreen(newPos);
     }
     private Vector3 LimitToScreen(Vector2 newPos)
     {
