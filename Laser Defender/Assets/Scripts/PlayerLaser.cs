@@ -27,8 +27,6 @@ public class PlayerLaser : MonoBehaviour
     {
         if(transform.position.y - _laserExtent.y > _screenTopLimit)
         {
-            Debug.Log(transform.position.y);
-            Debug.Log(_laserExtent.y);
             Destroy(this.gameObject);
         }
         else

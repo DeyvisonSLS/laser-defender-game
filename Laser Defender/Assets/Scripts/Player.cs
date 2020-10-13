@@ -13,6 +13,11 @@ public class Player : MonoBehaviour
     private GameObject _myLine = null;
     private LineRenderer _myLineRenderer;
     private Vector3 _shipOffset;
+    [SerializeField]
+    private bool _mouseDown;
+    [SerializeField]
+    private bool _mouseUp;
+    private Animator _animator;
     private Vector3 newLaserPos
     {
         get
@@ -48,12 +53,13 @@ public class Player : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        Cursor.visible = false;
+        // Cursor.visible = false;
         _myLineRenderer = _myLine.GetComponent<LineRenderer>();
+        _animator = GameObject.Find("Target").GetComponent<Animator>();
     }
 
     // Update is called once per frame
-    void Update()
+    void FixedUpdate()
     {
         // DoMove();
         DoMouseMove();
@@ -82,29 +88,75 @@ public class Player : MonoBehaviour
         transform.position = LimitToScreen(new Vector2(newXPos, newYPos));
     }
 
-    // void OnDrawGizmos()
-    // {
-    //     Gizmos.DrawLine(transform.position, _targetPrefab.transform.position);
-    // }
-
     private void DoMouseMove()
     {
-        Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        RaycastHit2D hit = Physics2D.Raycast(Camera.main.ScreenToWorldPoint(Input.mousePosition), Vector2.zero);
 
-        _targetPrefab.transform.position = mousePos;
+        bool colliderNotNull = true;
 
-        _shipOffset = transform.position - _targetPrefab.transform.position;
+        if(Input.GetMouseButtonDown(0))
+        {
+            if(hit.collider != null)
+            {
+                if(hit.collider.transform.name == "Player")
+                {
+                    colliderNotNull = true;
+                    _mouseDown = true;
+                    _mouseUp = false;
+                }
+                else
+                {
+                    Debug.Log("You have not clicked in the player yet.");
+                }
+            }
+            else
+            {
+                Debug.Log("You click in nothing.");
+            }
+        }
+        else if(Input.GetMouseButtonUp(0))
+        {
+            colliderNotNull = false;
+            _mouseUp = true;
+            _mouseDown = false;
+        }
 
-        _myLineRenderer.SetPosition(0, transform.position);
-        _myLineRenderer.SetPosition(1, _targetPrefab.transform.position);
+        if(colliderNotNull)
+        {
+            if(_mouseDown)
+            {
+                Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                _targetPrefab.transform.position = mousePos;
 
-        Ray ray = new Ray(transform.position, _targetPrefab.transform.position);
+                _animator.SetBool("MouseOver", true);
 
-        Vector3 newPos = transform.position;
+                _shipOffset = transform.position - _targetPrefab.transform.position;
 
-        newPos -= _shipOffset * Time.deltaTime * _shipVelocity;
+                _myLineRenderer.SetPosition(0, transform.position);
+                _myLineRenderer.SetPosition(1, _targetPrefab.transform.position);
 
-        transform.position = LimitToScreen(newPos);
+                Vector3 newPos = transform.position;
+
+                newPos -= (_shipOffset * Time.deltaTime) * _shipVelocity;
+
+                transform.position = LimitToScreen(newPos);
+
+                // if(transform.position == _targetPrefab.transform.position)
+                // {
+                //     _animator.SetBool("MouseOver", false);
+                // }
+            }
+            else if(_mouseUp)
+            {
+                _targetPrefab.transform.position = transform.position;
+
+                _myLineRenderer.SetPosition(0, transform.position);
+                _myLineRenderer.SetPosition(1, _targetPrefab.transform.position);
+
+                _animator.SetBool("MouseOver", false);
+            }
+        }
+
     }
     private Vector3 LimitToScreen(Vector2 newPos)
     {
