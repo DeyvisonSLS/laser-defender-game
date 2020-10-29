@@ -1,8 +1,10 @@
 ﻿using UnityEngine;
+// using UnityEngine.iOS;
 
 public class Player : MonoBehaviour
 {
     #region FIELDS
+    private const string TAG = "LDefender:";
     [SerializeField]
     private GameObject _laserPrefab = null;
     [SerializeField]
@@ -12,12 +14,10 @@ public class Player : MonoBehaviour
     [SerializeField]
     private GameObject _myLine = null;
     private LineRenderer _myLineRenderer;
-    private Vector3 _shipOffset;
-    [SerializeField]
-    private bool _mouseDown;
-    [SerializeField]
-    private bool _mouseUp;
+    private Vector2 _spaceBetween;
     private Animator _animator;
+    public bool pressMouse = false;
+    public bool playerHasClicked = false;
     private Vector3 newLaserPos
     {
         get
@@ -59,7 +59,7 @@ public class Player : MonoBehaviour
     }
 
     // Update is called once per frame
-    void FixedUpdate()
+    void Update()
     {
         // DoMove();
         DoMouseMove();
@@ -69,14 +69,32 @@ public class Player : MonoBehaviour
             Cursor.visible = true;
         }
 
-        if(Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Mouse0))
-        {
-            Instantiate(_laserPrefab, newLaserPos, Quaternion.identity);
-        }
+        #if UNITY_ANDROID && !UNITY_EDITOR
+            if(Input.touchCount > 1)
+            {
+                Debug.Log(TAG + "touchCount: " + Input.touchCount);
+                Touch touch = Input.GetTouch(1);
+
+                if(touch.phase == TouchPhase.Began)
+                {
+                    Debug.Log(TAG + "Touch began.");
+                    Fire();
+                }
+            }
+        #elif UNITY_EDITOR
+            if(Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Mouse0))
+            {
+                Fire();
+            }
+        #endif
     }
     #endregion
 
     #region PRIVATE_METHODS
+    private void Fire()
+    {
+        Instantiate(_laserPrefab, newLaserPos, Quaternion.identity);
+    }
     private void DoMove()
     {
         float deltaX = Input.GetAxis("Horizontal");
@@ -90,74 +108,164 @@ public class Player : MonoBehaviour
 
     private void DoMouseMove()
     {
-        RaycastHit2D hit = Physics2D.Raycast(Camera.main.ScreenToWorldPoint(Input.mousePosition), Vector2.zero);
-
-        bool colliderNotNull = true;
-
-        if(Input.GetMouseButtonDown(0))
-        {
-            if(hit.collider != null)
+        #if UNITY_ANDROID && !UNITY_EDITOR
+            if(Input.touchCount > 0)
             {
-                if(hit.collider.transform.name == "Player")
+                Touch touch = Input.GetTouch(0);
+
+                RaycastHit2D hit = Physics2D.Raycast(Camera.main.ScreenToWorldPoint(touch.position), Vector2.zero);
+                MoveShipToTarget(ShipCanMove(hit.collider));
+            }
+        #elif UNITY_EDITOR
+            RaycastHit2D hit = Physics2D.Raycast(Camera.main.ScreenToWorldPoint(Input.mousePosition), Vector2.zero);
+            MoveShipToTarget(ShipCanMove(hit.collider));
+        #endif
+
+        // pressMouse = false;
+        // playerHasClicked = false;
+    }
+
+    private bool ShipCanMove(Collider2D collider = null)
+    {
+        #if UNITY_ANDROID && !UNITY_EDITOR
+            // if(Input.touchCount > 0)
+            // {
+            Touch moveTouch = Input.GetTouch(0);
+
+            if(moveTouch.phase == TouchPhase.Began)
+            {
+                Debug.Log("Touch pressed once.");
+                if(collider != null)
                 {
-                    colliderNotNull = true;
-                    _mouseDown = true;
-                    _mouseUp = false;
+                    if(collider.name == "Target")
+                    {
+                        // Debug.Log("You click in player");
+                        playerHasClicked = true;
+                    }
+                    else
+                    {
+                        // Debug.Log("You have not clicked in the player yet.");
+                    }
                 }
                 else
                 {
-                    Debug.Log("You have not clicked in the player yet.");
+                    // Debug.Log("You click in nothing.");
+                    playerHasClicked = false;
                 }
             }
-            else
+            else if(moveTouch.phase == TouchPhase.Moved)
             {
-                Debug.Log("You click in nothing.");
+                Debug.Log("Touch is pressing down.");
+                pressMouse = true;
             }
-        }
-        else if(Input.GetMouseButtonUp(0))
-        {
-            colliderNotNull = false;
-            _mouseUp = true;
-            _mouseDown = false;
-        }
-
-        if(colliderNotNull)
-        {
-            if(_mouseDown)
+            else if(moveTouch.phase == TouchPhase.Ended)
             {
+                Debug.Log("Touch loose.");
+                pressMouse = false;
+                playerHasClicked = false;
+            }
+            // }
+            // else
+            // {
+            //     Debug.Log(TAG + "No touch detected.");
+            // }
+        #elif UNITY_EDITOR
+            if(Input.GetMouseButtonDown(0))
+            {
+                Debug.Log("Button pressed once.");
+                if(collider != null)
+                {
+                    if(collider.name == "Target")
+                    {
+                        // Debug.Log("You click in player");
+                        playerHasClicked = true;
+                    }
+                    else
+                    {
+                        // Debug.Log("You have not clicked in the player yet.");
+                    }
+                }
+                else
+                {
+                    // Debug.Log("You click in nothing.");
+                    playerHasClicked = false;
+                }
+            }
+            else if(Input.GetMouseButton(0))
+            {
+                Debug.Log("Button is pressing down.");
+                pressMouse = true;
+            }
+            else if(Input.GetMouseButtonUp(0))
+            {
+                Debug.Log("Button loose.");
+                pressMouse = false;
+                playerHasClicked = false;
+            }
+        #endif
+        
+
+        if(pressMouse && playerHasClicked)
+        {
+            Debug.Log("Ship can move");
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    private void MoveShipToTarget(bool canMove)
+    {
+        if(canMove)
+        {
+            #if UNITY_ANDROID && !UNITY_EDITOR
+                if(Input.touchCount > 0)
+                {
+                    Touch touch = Input.GetTouch(0);
+                    Vector2 touchPos = Camera.main.ScreenToWorldPoint(touch.position);
+                    _targetPrefab.transform.position = touchPos;
+                    _myLineRenderer.SetPosition(0, transform.position);
+                    _myLineRenderer.SetPosition(1, _targetPrefab.transform.position);
+                }
+                else
+                {
+                    Debug.Log(TAG + "No touch detected.");
+                }
+            #elif UNITY_EDITOR
                 Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
                 _targetPrefab.transform.position = mousePos;
-
-                _animator.SetBool("MouseOver", true);
-
-                _shipOffset = transform.position - _targetPrefab.transform.position;
-
                 _myLineRenderer.SetPosition(0, transform.position);
                 _myLineRenderer.SetPosition(1, _targetPrefab.transform.position);
+            #endif
 
-                Vector3 newPos = transform.position;
+            _animator.SetBool("MouseOver", true);
 
-                newPos -= (_shipOffset * Time.deltaTime) * _shipVelocity;
+            _spaceBetween = transform.position - _targetPrefab.transform.position;
 
-                transform.position = LimitToScreen(newPos);
+            Vector2 newPos = transform.position;
 
-                // if(transform.position == _targetPrefab.transform.position)
-                // {
-                //     _animator.SetBool("MouseOver", false);
-                // }
-            }
-            else if(_mouseUp)
-            {
-                _targetPrefab.transform.position = transform.position;
+            newPos -= (_spaceBetween * _shipVelocity) * Time.deltaTime;
 
-                _myLineRenderer.SetPosition(0, transform.position);
-                _myLineRenderer.SetPosition(1, _targetPrefab.transform.position);
+            transform.position = LimitToScreen(newPos);
 
-                _animator.SetBool("MouseOver", false);
-            }
+            // if(transform.position == _targetPrefab.transform.position)
+            // {
+            //     _animator.SetBool("MouseOver", false);
+            // }
         }
+        else
+        {
+            _targetPrefab.transform.position = transform.position;
 
+            _myLineRenderer.SetPosition(0, transform.position);
+            _myLineRenderer.SetPosition(1, _targetPrefab.transform.position);
+
+            _animator.SetBool("MouseOver", false);
+        }
     }
+
     private Vector3 LimitToScreen(Vector2 newPos)
     {
         Vector3 screenLimit = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, transform.position.z));
